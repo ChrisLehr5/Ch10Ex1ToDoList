@@ -13,23 +13,30 @@ namespace ToDoList.Controllers
 
         public IActionResult Index(string id)
         {
-            // load current filters and data needed for filter drop downs in ViewBag
+            //store current filters and data needed for filter drop downs in ToDoViewModel
+            ToDoViewModel model = new ToDoViewModel();
+
             var filters = new Filters(id);
-            ViewBag.Filters = filters;
-            ViewBag.Categories = context.Categories.ToList();
-            ViewBag.Statuses = context.Statuses.ToList();
-            ViewBag.DueFilters = Filters.DueFilterValues;
+
+            model.Filters = new Filters(id);
+            model.Categories = context.Categories.ToList();
+            model.Statuses = context.Statuses.ToList();
+            model.DueFilters = Filters.DueFilterValues;
+
 
             // get ToDo objects from database based on current filters
             IQueryable<ToDo> query = context.ToDos
                 .Include(t => t.Category).Include(t => t.Status);
-            if (filters.HasCategory) {
+            if (filters.HasCategory)
+            {
                 query = query.Where(t => t.CategoryId == filters.CategoryId);
             }
-            if (filters.HasStatus) {
+            if (filters.HasStatus)
+            {
                 query = query.Where(t => t.StatusId == filters.StatusId);
             }
-            if (filters.HasDue) {
+            if (filters.HasDue)
+            {
                 var today = DateTime.Today;
                 if (filters.IsPast)
                     query = query.Where(t => t.DueDate < today);
@@ -39,30 +46,33 @@ namespace ToDoList.Controllers
                     query = query.Where(t => t.DueDate == today);
             }
             var tasks = query.OrderBy(t => t.DueDate).ToList();
-            return View(tasks);
+
+            model.Tasks = tasks;
+            return View(model);
         }
 
         public IActionResult Add()
         {
-            ViewBag.Categories = context.Categories.ToList();
-            ViewBag.Statuses = context.Statuses.ToList();
-            return View();
+            ToDoViewModel model = new ToDoViewModel();
+            model.Categories = context.Categories.ToList();
+            model.Statuses = context.Statuses.ToList();
+            return View(model);
         }
 
         [HttpPost]
-        public IActionResult Add(ToDo task)
+        public IActionResult Add(ToDoViewModel model)
         {
             if (ModelState.IsValid)
             {
-                context.ToDos.Add(task);
+                context.ToDos.Add(model.CurrentTask);
                 context.SaveChanges();
                 return RedirectToAction("Index");
             }
             else
             {
-                ViewBag.Categories = context.Categories.ToList();
-                ViewBag.Statuses = context.Statuses.ToList();
-                return View(task);
+                model.Categories = context.Categories.ToList();
+                model.Statuses = context.Statuses.ToList();
+                return View(model);
             }
         }
 
@@ -74,12 +84,14 @@ namespace ToDoList.Controllers
         }
 
         [HttpPost]
-        public IActionResult Edit([FromRoute]string id, ToDo selected)
+        public IActionResult Edit([FromRoute] string id, ToDo selected)
         {
-            if (selected.StatusId == null) {
+            if (selected.StatusId == null)
+            {
                 context.ToDos.Remove(selected);
             }
-            else {
+            else
+            {
                 string newStatusId = selected.StatusId;
                 selected = context.ToDos.Find(selected.Id);
                 selected.StatusId = newStatusId;
